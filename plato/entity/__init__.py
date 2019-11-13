@@ -15,6 +15,7 @@ legend = {
 class Entity:
     def __init__(self, id='unknown', affiliation='white', xy=np.asarray([0,0]), route=[]):
         self.id, self.affiliation, self.xy = id, affiliation, xy
+        self.controlled = False
         self.operational = True
         self.properties = {}
         self.weapons = []
@@ -51,6 +52,7 @@ class Entity:
 callsigns = [
 'ACORN',
 'AMERICA',
+'AMSTERDAM',
 'ANAHEIM',
 'ATLANTA',
 'AURORA',
@@ -89,12 +91,14 @@ callsigns = [
 'LEYTEGULF',
 'LIMA',
 'LITTLEROCK',
+'LIVERPOOL',
 'LONDON',
 'MAHAN',
 'MARYLAND',
 'MILWAUKEE',
 'MONSOON',
 'MONTANA',
+'NECTAR',
 'NEEDLES',
 'NEWYORK',
 'NOVEMBER',
@@ -117,7 +121,8 @@ callsigns = [
 'TOKYO',
 'TOMBSTONE',
 'TYPHOON',
-'URBANA'
+'URBANA',
+'VALENCIA',
 'WATERLOO',
 'WHISKEY',
 'WICHITA',

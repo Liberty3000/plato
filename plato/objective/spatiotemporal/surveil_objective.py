@@ -1,7 +1,8 @@
 import numpy as np
+from plato.util import coverage
 
-class EngageObjective:
-    def __init__(self, interval=[-np.inf, np.inf], targets=[], radius=3):
+class SurveilObjective:
+    def __init__(self, interval=[-np.inf, np.inf], targets=[]):
         self.obj_type = 'spatiotemporal'
         self.reward = 0
         # who
@@ -18,9 +19,9 @@ class EngageObjective:
         self.reward = 0
         self.eoi = kwargs['enemies']
         self.aoi = [{'xy':ent.xy, 'radius':1} for ent in self.eoi.values()]
-
-        if kwargs['timer'] >= self.ioi[0] and kwargs['timer'] <= self.ioi[1]:
-            for ent in self.eoi.values():
-                if not ent.operational: self.reward += 1
-        if self.reward == len(self.eoi): return True
+        drones = [ent for ent in entities.values() if ent.entity_type == 'drone']
+        for xy in [target.xy for target in self.eoi.values()]:
+            for drone in drones:
+                if xy in coverage(drone.xy, drone.properties['visibility']):
+                    self.reward += 1
         return False

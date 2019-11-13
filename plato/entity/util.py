@@ -41,10 +41,16 @@ def place_entities(entities, affiliation):
         entities.append(entity_types[ent['type']](xy=np.asarray(ent['xy']), affiliation=affiliation))
     return entities
 
-def plot_entities(entities, canvas, ax, routes=False):
+def plot_entities(entities, controlled, canvas, ax, routes=False):
     if ax is None: fig,ax = mp.subplots(figsize=(10,10))
 
     patches = []
+
+    for ent in controlled:
+        x,y = ent.xy
+        controlled = Circle((y,x), radius=2, alpha=0.15, color='cyan')
+        patch = ax.add_patch(controlled)
+        patches.append(patch)
 
     for id,ent in entities.items():
         x,y = ent.xy

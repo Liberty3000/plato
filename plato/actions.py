@@ -36,7 +36,6 @@ def attack(entity, action, damage_map, verbose=False):
             ij = cells[action]
 
             for (x,y) in coverage(ij, weapon_model['weapon_radius'], damage_map.shape):
-                if verbose: print('before', damage_map[x,y])
                 if weapon_model['weapon_accuracy'] < np.random.random():
                     damage_map[x,y] += weapon_model['weapon_power']
     except: pass

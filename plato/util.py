@@ -1,8 +1,4 @@
-import random, numpy as np, matplotlib.pyplot as mp
-from matplotlib.patches import Circle
-
-def in_range(entity, xy, radius, shape):
-    return entity.xy in coverage(xy, radius, shape)
+import numpy as np
 
 def coverage(xy, radius, shape=(100,100)):
     neighborhood = []
@@ -22,21 +18,13 @@ def centroid(entities):
 
 def quantize_area(region, shape):
     return {
-    'W': [[0,shape[0]//2],[0,shape[1]//2]],
-
-    'E': [[0,shape[0]],[shape[1]//2,shape[1]]],
-
-    'S': [[shape[0]//2,shape[0]],[0,shape[1]]],
-
-    'N': [[0,shape[0]//2],[0,shape[1]]],
-
-    'NE':[[shape[0]//2,shape[0]],[0,shape[1]]],
-
+    'W': [[0,shape[0]//2],[0,shape[1]]],
+    'E': [[shape[0]//2,shape[0]],[0,shape[1]]],
+    'S': [[0,shape[0]],[shape[1]//2,shape[1]]],
+    'N': [[0,shape[0]],[0,shape[1]//2]],
+    'NE':[[shape[0]//2,shape[0]],[0,shape[1]//2]],
     'SW':[[0,shape[0]//2],[shape[1]//2,shape[1]]],
-
     'SE':[[shape[0]//2,shape[0]],[shape[1]//2,shape[1]]],
-
     'NW':[[0,shape[0]//2],[0,shape[1]//2]],
-
     'random':[[0,shape[0]],[0,shape[1]]],
     }[region]

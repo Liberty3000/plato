@@ -1,21 +1,21 @@
 import gym, random, os, time, tqdm
 import numpy as np, matplotlib.pyplot as mp
-
 from plato.actions import attack, patrol
 from plato.features import global_features
 from plato.entity.util import plot_entities, randomize_entities
-from plato.objective.util import plot_objectives
+from plato.objective.util import plot_objectives, encode_objectives
 from plato.router import pathfinder, absolute_distance
 from plato.terrain import perlin
 from plato.util import coverage, quantize_area
 
 class Environment(gym.Env):
-    def __init__(self, config=None, shape=(64,64), objectives=[], time_limit=2**14):
+    def __init__(self, config=None, shape=(64,64), objectives=[], controlled=[], time_limit=2**14):
         self.config, self.shape = config, shape
         self.state_space = (len(global_features), *shape)
         self.pathfinder = pathfinder()
         self.global_reward, self.local_rewards = 0, {}
         self.objectives = objectives
+        self.controlled = controlled
         self.time_limit = time_limit
         self.fig,self.ax = None,None
 
@@ -43,7 +43,7 @@ class Environment(gym.Env):
         self.initialize_terrain()
         return self.observation(self.whites, self.blacks)
 
-    def observation(self, positive, negative=None, relative=None):
+    def observation(self, positive, negative=None):
         minimap = np.zeros((len(global_features),*self.shape))
 
         minimap[global_features.index('land'),:]= self.land
@@ -81,20 +81,20 @@ class Environment(gym.Env):
             for (x,y) in coverage(ent.xy, ent.properties['visibility'], self.shape):
                 minimap[global_features.index('visibility'),x,y] += ent.properties['visibility']
 
-        # objectives
-        for obj in self.objectives:
-            for (x,y) in coverage(obj.aoi['xy'], obj.aoi['radius'], self.shape):
-                minimap[global_features.index('{}_area_of_interest'.format(obj.obj_type)),x,y] += 1
-        # reconnaissance
-        for ent in self.white_detections:
+        minimap = encode_objectives(self.objectives, minimap, self.white_detections, self.shape)
+
+        if any([ent.id in self.blacks.keys() for ent in positive.values()]):
+            dets,kills,casts = self.white_detections,self.white_casualties,self.black_casualties
+        else:
+            dets,kills,casts = self.black_detections,self.black_casualties,self.white_casualties
+
+        for ent in dets:
             x,y = ent.xy
             minimap[global_features.index(ent.entity_type + '_detections'),x,y] += 1
-        # causalties
-        for ent in self.white_casualties:
+        for ent in kills:
             x,y = ent.xy
             minimap[global_features.index('positive_casualties'),x,y] += 1
-        # kills
-        for ent in self.black_casualties:
+        for ent in casts:
             x,y = ent.xy
             minimap[global_features.index('negative_casualties'),x,y] += 1
 
@@ -146,22 +146,23 @@ class Environment(gym.Env):
         return reward
 
     def termination_condition(self):
-        terminal = False
+        terminal,status = False,'neutral'
 
         args = {
         'spatial':dict(entities=self.whites),
         'temporal':dict(entities=self.whites, timer=self.timer),
-        'spatiotemporal':dict(entities=self.whites,timer=self.timer)}
+        'spatiotemporal':dict(entities=self.whites, enemies=self.blacks, timer=self.timer)}
         terminal = any([obj(**args[obj.obj_type]) for obj in self.objectives])
+        if terminal: status = 'success'
 
-        if self.timer >= self.time_limit: terminal = True
+        if self.timer >= self.time_limit: terminal,status = True,'neutral'
 
         if all([not ent.operational for ent in self.whites.values()]):
-            terminal = True
+            terminal,status = True,'failure'
         if all([not ent.operational for ent in self.blacks.values()]):
-            terminal = True
+            terminal,status = True,'success'
 
-        return terminal
+        return terminal,status
 
     def step(self, white_actions={}, black_actions={}, verbose=False):
         self.timer += 1
@@ -214,7 +215,8 @@ class Environment(gym.Env):
         metadata['black_map'] = black_map
 
         self.global_reward = self.shape_reward()
-        self.terminal = self.termination_condition()
+        self.terminal, status = self.termination_condition()
+        metadata['status'] = status
         return metadata['positive_observables'], self.global_reward, self.terminal, metadata
 
     def render(self, show=True, routes=False):
@@ -223,10 +225,11 @@ class Environment(gym.Env):
         canvas = np.zeros((*self.shape,3))
         ax.set_aspect('equal')
 
-        canvas,ax,wpatches = plot_entities(self.whites, canvas, ax)
-        canvas,ax,bpatches = plot_entities(self.blacks, canvas, ax)
+        controlled = [ent for ent in self.whites.values() if ent.controlled == True]
 
-        canvas,ax,opatches = plot_objectives(self.objectives, canvas, ax, self.timer)
+        canvas,ax,wpatches = plot_entities(self.whites, controlled, canvas, ax)
+        canvas,ax,bpatches = plot_entities(self.blacks, [], canvas, ax)
+        canvas,ax,opatches = plot_objectives(self.objectives, self.timer, canvas, ax)
 
         mp.title('PLATO Environment', size=16)
         ax.imshow(canvas.astype(np.uint8))
