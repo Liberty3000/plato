@@ -4,7 +4,7 @@ from plato.actions import attack, patrol
 from plato.features import global_features
 from plato.entity.util import plot_entities, randomize_entities
 from plato.objective.util import plot_objectives, encode_objectives
-from plato.router import pathfinder, absolute_distance
+from plato.router import pathfinder
 from plato.terrain import perlin
 from plato.util import coverage, quantize_area
 
@@ -17,7 +17,6 @@ class Environment(gym.Env):
         self.objectives = objectives
         self.controlled = controlled
         self.time_limit = time_limit
-        self.fig,self.ax = None,None
 
     def initialize_terrain(self):
         self.air = np.zeros(self.shape)
@@ -42,6 +41,9 @@ class Environment(gym.Env):
 
         self.initialize_terrain()
         return self.observation(self.whites, self.blacks)
+
+    def terrain(self):
+        return np.asarray([self.sea, self.land, self.air])
 
     def observation(self, positive, negative=None):
         minimap = np.zeros((len(global_features),*self.shape))
@@ -81,12 +83,12 @@ class Environment(gym.Env):
             for (x,y) in coverage(ent.xy, ent.properties['visibility'], self.shape):
                 minimap[global_features.index('visibility'),x,y] += ent.properties['visibility']
 
-        minimap = encode_objectives(self.objectives, minimap, self.white_detections, self.shape)
 
         if any([ent.id in self.blacks.keys() for ent in positive.values()]):
             dets,kills,casts = self.white_detections,self.white_casualties,self.black_casualties
         else:
             dets,kills,casts = self.black_detections,self.black_casualties,self.white_casualties
+            minimap = encode_objectives(self.objectives, minimap, self.white_detections, self.shape)
 
         for ent in dets:
             x,y = ent.xy
@@ -99,9 +101,6 @@ class Environment(gym.Env):
             minimap[global_features.index('negative_casualties'),x,y] += 1
 
         return minimap
-
-    def terrain(self):
-        return np.asarray([self.sea, self.land, self.air])
 
     def observe_detections(self):
         self.white_detections, self.black_detections = [],[]
@@ -134,12 +133,10 @@ class Environment(gym.Env):
         for _ in self.black_casualties: reward += 0.2
         # penalize casualties
         for _ in self.white_casualties: reward -= 0.2
-
         # reward survival
         if all([not ent.operational for ent in self.blacks.values()]): reward += 1
         # penalize extinction
         if all([not ent.operational for ent in self.whites.values()]): reward -= 1
-
         # reward objectives
         reward += sum([obj.reward for obj in self.objectives])
 
@@ -148,11 +145,9 @@ class Environment(gym.Env):
     def termination_condition(self):
         terminal,status = False,'neutral'
 
-        args = {
-        'spatial':dict(entities=self.whites),
-        'temporal':dict(entities=self.whites, timer=self.timer),
-        'spatiotemporal':dict(entities=self.whites, enemies=self.blacks, timer=self.timer)}
-        terminal = any([obj(**args[obj.obj_type]) for obj in self.objectives])
+        args = dict(entities=self.whites, enemies=self.blacks, timer=self.timer)
+
+        terminal = any([obj(**args) for obj in self.objectives])
         if terminal: status = 'success'
 
         if self.timer >= self.time_limit: terminal,status = True,'neutral'
@@ -219,8 +214,8 @@ class Environment(gym.Env):
         metadata['status'] = status
         return metadata['positive_observables'], self.global_reward, self.terminal, metadata
 
-    def render(self, show=True, routes=False):
-        if not self.fig: fig,ax = mp.subplots(1,1,figsize=(10,10))
+    def render(self, notebook=False, show=True, routes=False):
+        fig,ax = mp.subplots(1,1,figsize=(10,10))
 
         canvas = np.zeros((*self.shape,3))
         ax.set_aspect('equal')

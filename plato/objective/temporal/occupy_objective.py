@@ -1,7 +1,7 @@
 import numpy as np
 from plato.util import coverage
 
-class ControlObjective:
+class OccupyObjective:
     def __init__(self, interval=[-np.inf, np.inf], area={'xy':[16,16], 'radius': 4}):
         self.obj_type = 'temporal'
         self.reward = 0
@@ -12,14 +12,14 @@ class ControlObjective:
         # when
         self.ioi = interval # interval of interest
         # how
-        self.criterion = 10
+        self.criterion = None
 
     # what (condition)
     def __call__(self, entities, timer, *args, **kwargs):
-        if any([ent.xy in coverage(self.aoi['xy'],self.aoi['radius']) for ent in entities.values() if ent.operational]):
-            self.reward = 1
-        else:
-            self.reward = 0
+        enemies = kwargs['enemies']
+        whites = [ent.xy in coverage(self.aoi['xy'],self.aoi['radius']) for ent in entities.values() if ent.operational]
+        blacks = [ent.xy in coverage(self.aoi['xy'],self.aoi['radius']) for ent in enemies.values() if ent.operational]
 
-        if self.reward > self.criterion: return True
-        else: return False
+        self.reward = len(whites) - len(blacks)
+
+        return False

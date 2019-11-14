@@ -18,21 +18,19 @@ def plot_objectives(objectives, timer, canvas, ax):
             if timer > end:
                 color = 'gray'  # post-activation
 
-        for obj in objectives:
-            # if a single objective has multiple areas of interest
-            if isinstance(obj.aoi, list):
-                for aoi in obj.aoi:
-                    x,y = aoi['xy']
-                    circle= Circle((y,x), radius=aoi['radius'], alpha=alpha, color=color)
-                    patch = ax.add_patch(circle)
-                    patches.append(patch)
-                    canvas[x,y,:] = pixel
-            else:
-                x,y = obj.aoi['xy']
-                circle= Circle((y,x), radius=obj.aoi['radius'], alpha=alpha, color=color)
+        if isinstance(obj.aoi, list):
+            for aoi in obj.aoi:
+                x,y = aoi['xy']
+                circle= Circle((y,x), radius=aoi['radius'], alpha=alpha, color=color)
                 patch = ax.add_patch(circle)
                 patches.append(patch)
                 canvas[x,y,:] = pixel
+        if not isinstance(obj.aoi, list) and obj.aoi:
+            x,y = obj.aoi['xy']
+            circle= Circle((y,x), radius=obj.aoi['radius'], alpha=alpha, color=color)
+            patch = ax.add_patch(circle)
+            patches.append(patch)
+            canvas[x,y,:] = pixel
 
     return canvas, ax, patches
 
@@ -55,17 +53,16 @@ def encode_objectives(objectives, minimap, detections, shape):
             for aoi in obj.aoi:
                 for (x,y) in coverage(aoi['xy'], aoi['radius'], shape):
                     xys[(x,y)] = obj.obj_type
-        else:
+        if not isinstance(obj.aoi, list) and obj.aoi:
             xys = {(x,y):obj.obj_type for (x,y) in coverage(obj.aoi['xy'], obj.aoi['radius'], shape)}
 
         # only encode an aoi if it is not attached to an eoi that we have not detected
-        xys_ = {}
         if obj.eoi:
-            for (x,y),obj_type in xys.items():
-                if (x,y) in [ent.xy for ent in detections]:
-                    xys_[(x,y)] = obj_type
+            for xy,obj_type in xys.items():
+                if xy in [ent.xy for ent in detections]:
+                    xys[xy] = obj_type
 
-        for ((x,y),obj_type) in xys_.items():
+        for ((x,y),obj_type) in xys.items():
             minimap[global_features.index('{}_area_of_interest'.format(obj_type)),x,y] += 1
 
     return minimap
