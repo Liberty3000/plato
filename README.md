@@ -11,10 +11,18 @@ pip install -e .
 ___
 
 ### Modes
+| Deathmatch | Hide and Seek |
+|------------|---------------|
+| ![](graphics/deathmatch.gif) | ![](graphics/hide_and_seek.gif) |
+
+| Capture the Flag | King of the Hill |
+|------------|---------------|
+| ![](graphics/capture_the_flag.gif) | ![](graphics/king_of_the_hill.gif) |
+
 |        Mode        | Description                        |
 |--------------------|------------------------------------|
 | Deathmatch         | A combat game mode to kill as many other players as possible until a certain condition is reached.
-| Hide and Seek      | A predator-prey game mode with counter objectives of *hunt* and *survive*.
+| Hide and Seek      | A predator-prey game mode with counter objectives of *engage* and *survive*.
 | Capture the Flag   | A pursuit-based game mode with counter objectives of *stealth* and *capture*.
 | King of the Hill   | A control-based game mode with the common objective of defending pre-determined spatial areas of interest.
 | Search and Destroy | A customizable game mode built on multiple competing temporal objectives.
